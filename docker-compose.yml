@@ -1,0 +1,45 @@
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: longevita-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: longevita
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-longevita_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - longevita_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d longevita"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: longevita-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      FRONTEND_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-longevita_dev_password}@db:5432/longevita?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting Docker Compose}
+      JWT_EXPIRES_IN: 15m
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run start:dev"
+
+volumes:
+  longevita_pgdata:
