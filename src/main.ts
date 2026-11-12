@@ -11,8 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
+  // API prefix
   app.setGlobalPrefix('api/v1');
 
+  // Security
   app.use(helmet());
 
   // CORS configuration
@@ -55,13 +57,13 @@ async function bootstrap() {
 
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = config.get<number>('PORT', 4000);
+  // Docker-compatible server configuration
+  const port = Number(config.get<string>('PORT', '4000'));
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(`Longevita API running at http://localhost:${port}/api/v1`);
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
-  
